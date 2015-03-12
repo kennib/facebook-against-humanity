@@ -1,47 +1,36 @@
 > {-# LANGUAGE OverloadedStrings #-}
 
 The goal of this project is to turn posts from Facebook into Cards Against Humanity questions.
-We're going to achieve this by reading the wall posts from an RSS feed of Facebook notifications.
+We're going to achieve this by reading the wall posts from the Facebook graph API.
 
 
 The HTTP library allows us to fetch the RSS feed from the internet.
 
-> import Network.HTTP.Conduit (Request(..), parseUrl, withManager, httpLbs, responseBody)
-> import Network.HTTP.Types.Header (hUserAgent)
-> import Network.HTTP.Headers (mkHeader)
-> import qualified Data.ByteString.Lazy.Char8 as L
+> import Network.HTTP.Conduit (Request(..), parseUrl, withManager, setQueryString, httpLbs, responseBody)
 > import Control.Monad.IO.Class (liftIO)
 
-The feed library allows us to interpret RSS feeds.
+The Aeson library allows us to parse the graph API.
 
-> import Text.Feed.Import (parseFeedString)
-> import Text.Feed.Query
-> import Text.Feed.Types (Item)
+> import Data.Aeson (decode)
 
-You can create an RSS feed for your Facebook notifications from your Notifications page:
-1. Go to facebook.com/notifications.
-2. At the top of the page, click "RSS" next to "Get notifications via:"
-3. Copy the link and paste it below.
+You can get an access token for Facebook's graph API by going to https://developers.facebook.com/tools/explorer and clicking the "Get Access Token" button.
+Make sure to enable access to your posts.
 
-> rssFeed = ""
+> feedURL = "https://graph.facebook.com/v2.2/me/feed"
+> accessToken = ""
 
+We can authenticate graph API requests by added the access token to the query string
 
-Unfortunately the Facebook RSS page only works for browser user agents.
-So we have to user a user agent string like the following one.
-
-> userAgent = "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/40.0.2214.111 Safari/537.36"
-> userAgentHeader = (hUserAgent, userAgent)
+> auth = setQueryString [("access_token", Just accessToken)]
 
 
-Now we can request, parse and print the first wall post in the feed.
+Now we can request, parse and print the feed.
 
 > main = do
->   case parseUrl rssFeed of
+>   case parseUrl feedURL of
 >       Nothing      -> putStrLn "Feed URL is invalid"
 >       Just request -> withManager $ \manager -> do
->           let browserRequest = request { requestHeaders = [userAgentHeader] }
->           response <- httpLbs browserRequest manager
->           liftIO $ case parseFeedString (L.unpack (responseBody response)) of
->               Nothing   -> putStrLn "Unable to parse feed"
->               Just feed -> do
->                   print feed
+>           let authRequest = auth request
+>           response <- httpLbs authRequest manager
+>           liftIO $ do
+>               print (responseBody response)
