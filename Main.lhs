@@ -23,7 +23,7 @@ You can get an access token for Facebook's graph API by going to https://develop
 Make sure to enable access to your posts.
 
 > feedURL = "https://graph.facebook.com/v2.2/me/feed"
-> accessToken = ""
+> accessToken = "CAACEdEose0cBAJ1x1VJ8BZA6kCIeLrh9sHrDZAzVCuJyFJ4EMaN3eampeHnDVp9XcN69ktFR8lbHi34xfzFWc9w0Sn8nZAneQv0Bl9P7ci30kyHLWZBTA29BbnVivxTLZAKwBigxGyis8ulRExqeqVLAhfe3glFWhZBjpgNHJG8QwDUt9SvmXeuJ4rGHTsb2qNGo6NwhEMCoPF6T0Vo1Ie0oU2jrO94tMZD"
 
 We can authenticate graph API requests by added the access token to the query string
 
@@ -40,4 +40,11 @@ Now we can request, parse and print the feed.
 >           response <- httpLbs authRequest manager
 >           liftIO $ case eitherDecode (responseBody response) of
 >               Left  error  -> putStrLn error
->               Right result -> print (result :: Result)
+>               Right result -> do
+>                   let latestPost = head (wallPosts (resultdata result))
+>                   print latestPost
+
+
+To find only the wall posts we simply check the status type
+
+> wallPosts = filter (\post -> status_type post == "wall_post")
