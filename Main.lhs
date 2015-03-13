@@ -82,9 +82,9 @@ We want to display it in the style of a Cards Against Humanity card.
 >   HTML.head_ $ do
 >       HTML.link_ [HTML.type_ "text/css", HTML.rel_ "stylesheet", HTML.href_ "facebook-against-humanity.css"]
 >   HTML.body_ $ do
->       HTML.section_ [HTML.class_ "question card"] $ do
+>       HTML.section_ [HTML.id_ "question", HTML.class_ "question card"] $ do
 >          HTML.h1_ $ HTML.toHtml (message post)
->          HTML.p_ [HTML.class_ "author"] $ HTML.toHtml (name . from $ post)
+>          HTML.p_ [HTML.id_ "answer", HTML.class_ "author"] $ HTML.toHtml (name . from $ post)
 >       HTML.section_ [HTML.class_ "answer card"] $ do
 >          HTML.h1_ $ HTML.toHtmlRaw answer
 
