@@ -69,6 +69,7 @@ We want to display it in the style of a Cards Against Humanity card.
 >   HTML.body_ $ do
 >       HTML.section_ [HTML.class_ "question card"] $ do
 >          HTML.h1_ $ HTML.toHtml (message post)
+>          HTML.p_ [HTML.class_ "author"] $ HTML.toHtml (name . from $ post)
 
 
 Now that we can get the latest post nad make it look like a card let's serve it as a web page.
