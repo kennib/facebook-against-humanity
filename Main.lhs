@@ -18,9 +18,10 @@ The Lucid library will help us create HTML for displaying our cards.
 
 The random library allows us to select a random CAH card.
 
-> import Data.RVar (runRVar)
-> import Data.Random.Extras (choice)
-> import Data.Random.Source.DevRandom (DevRandom(..))
+> import System.Random (StdGen, mkStdGen, randomR)
+> import Data.Char (ord)
+> import Data.Text (unpack)
+
 
 The HTTP library allows us to fetch the RSS feed from the internet.
 
@@ -70,9 +71,13 @@ To find only the wall posts we simply check the status type
 We now have a question, but what about the answer?
 The answer is randomly selected from a list of Cards Agains Humanity cards.
 
+> randomAnswer :: Post -> IO String
 > randomAnswer post = do
 >   cards <- fmap lines $ readFile "answers.txt"
->   runRVar (choice cards) DevRandom
+>   let seed = mkStdGen (sum . map ord . unpack . message $ post)
+>   let (cardIndex, next) = randomR (0, length cards) seed
+>   return $ cards !! cardIndex
+
 
 We don't just want to display the latest post and answer.
 We want to display it in the style of a Cards Against Humanity card.
