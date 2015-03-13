@@ -2,7 +2,13 @@
 
 The goal of this project is to turn posts from Facebook into Cards Against Humanity questions.
 We're going to achieve this by reading the wall posts from the Facebook graph API.
+Then once we have the wall posts, displaying them as web pages.
 
+
+The Scotty library will allow us to serve our cards as web pages.
+
+> import Web.Scotty (scotty, get, html)
+> import Data.String (fromString)
 
 The HTTP library allows us to fetch the RSS feed from the internet.
 
@@ -32,19 +38,37 @@ We can authenticate graph API requests by added the access token to the query st
 
 Now we can request, parse and print the feed.
 
-> main = do
+> fetchLatestPost :: IO (Either String Post)
+> fetchLatestPost = do
 >   case parseUrl feedURL of
->       Nothing      -> putStrLn "Feed URL is invalid"
+>       Nothing      -> return $ Left "Feed URL is invalid"
 >       Just request -> withManager $ \manager -> do
 >           let authRequest = auth request
 >           response <- httpLbs authRequest manager
->           liftIO $ case eitherDecode (responseBody response) of
->               Left  error  -> putStrLn error
->               Right result -> do
->                   let latestPost = head (wallPosts (resultdata result))
->                   print latestPost
+>           return $ case eitherDecode (responseBody response) of
+>               Left  error  -> Left error
+>               Right result -> Right $ head (wallPosts (resultdata result))
 
 
 To find only the wall posts we simply check the status type
 
 > wallPosts = filter (\post -> status_type post == "wall_post")
+
+
+Now that we can get the latest post lets serve it as a web page.
+
+> card = do
+>   latestPost <- liftIO $ fetchLatestPost
+>   case latestPost of
+>       Left  error -> html' $ error
+>       Right post  -> html' $ show latestPost
+
+The html' function is useful for turning Strings (as opposed to Text) into HTML.
+
+> html' = html . fromString
+
+
+We can now create a server which serves our web page!
+
+> main = scotty 8008 $ do
+>   get "/" card
