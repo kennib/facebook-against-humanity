@@ -28,5 +28,6 @@ executable facebook-against-humanity
                ,       transformers
                ,       aeson
                ,       scotty
+               ,       lucid
   -- hs-source-dirs:      
   default-language:    Haskell2010

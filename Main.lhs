@@ -7,8 +7,12 @@ Then once we have the wall posts, displaying them as web pages.
 
 The Scotty library will allow us to serve our cards as web pages.
 
-> import Web.Scotty (scotty, get, html)
+> import Web.Scotty (scotty, get, html, text, raw)
 > import Data.String (fromString)
+
+The Lucid library will help us create HTML for displaying our cards.
+
+> import qualified Lucid as HTML
 
 The HTTP library allows us to fetch the RSS feed from the internet.
 
@@ -55,13 +59,25 @@ To find only the wall posts we simply check the status type
 > wallPosts = filter (\post -> status_type post == "wall_post")
 
 
-Now that we can get the latest post lets serve it as a web page.
+We don't just want to display the latest post.
+We want to display it in the style of a Cards Against Humanity card.
 
-> card = do
+> card :: Post -> HTML.Html ()
+> card post = HTML.html_ $ do
+>   HTML.head_ $ do
+>       HTML.link_ [HTML.type_ "text/css", HTML.rel_ "stylesheet", HTML.href_ "facebook-against-humanity.css"]
+>   HTML.body_ $ do
+>       HTML.section_ [HTML.class_ "question card"] $ do
+>          HTML.h1_ $ HTML.toHtml (message post)
+
+
+Now that we can get the latest post nad make it look like a card let's serve it as a web page.
+
+> cardHandler = do
 >   latestPost <- liftIO $ fetchLatestPost
 >   case latestPost of
 >       Left  error -> html' $ error
->       Right post  -> html' $ show latestPost
+>       Right post  -> raw $ HTML.renderBS $ card post
 
 The html' function is useful for turning Strings (as opposed to Text) into HTML.
 
@@ -71,4 +87,7 @@ The html' function is useful for turning Strings (as opposed to Text) into HTML.
 We can now create a server which serves our web page!
 
 > main = scotty 8008 $ do
->   get "/" card
+>   get "/" cardHandler
+>   get "/facebook-against-humanity.css" $ do
+>       css <- liftIO $ readFile "facebook-against-humanity.css"
+>       text $ fromString $ css
