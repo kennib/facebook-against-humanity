@@ -14,13 +14,15 @@ The Scotty library will allow us to serve our cards as web pages.
 The Lucid library will help us create HTML for displaying our cards.
 
 > import qualified Lucid as HTML
+> import Data.Monoid (mconcat)
 
 
 The random library allows us to select a random CAH card.
 
-> import System.Random (StdGen, mkStdGen, randomR)
+> import System.Random (StdGen, mkStdGen, randomRs)
 > import Data.Char (ord)
 > import Data.Text (unpack)
+> import Data.List (group)
 
 
 The HTTP library allows us to fetch the RSS feed from the internet.
@@ -71,19 +73,23 @@ To find only the wall posts we simply check the status type
 We now have a question, but what about the answer?
 The answer is randomly selected from a list of Cards Agains Humanity cards.
 
-> randomAnswer :: Post -> IO String
-> randomAnswer post = do
+> randomAnswers :: Post -> IO [String]
+> randomAnswers post = do
 >   cards <- fmap lines $ readFile "answers.txt"
 >   let seed = mkStdGen (sum . map ord . unpack . message $ post)
->   let (cardIndex, next) = randomR (0, length cards) seed
->   return $ cards !! cardIndex
+>   let cardIndexes = randomRs (0, length cards) seed
+>   return $ map (cards !!) (take answers cardIndexes)
+>   where answers = max 1 numBlanks
+>         numBlanks = length blanks
+>         blanks = filter isBlank (group $ unpack $ message post)
+>         isBlank = (=='_') . head
 
 
 We don't just want to display the latest post and answer.
 We want to display it in the style of a Cards Against Humanity card.
 
-> card :: Post -> String -> HTML.Html ()
-> card post answer = HTML.html_ $ do
+> card :: Post -> [String] -> HTML.Html ()
+> card post answers = HTML.html_ $ do
 >   HTML.head_ $ do
 >       HTML.link_ [HTML.type_ "text/css", HTML.rel_ "stylesheet", HTML.href_ "facebook-against-humanity.css"]
 >   HTML.body_ $ do
@@ -91,7 +97,7 @@ We want to display it in the style of a Cards Against Humanity card.
 >          HTML.h1_ $ HTML.toHtml (message post)
 >          HTML.p_ [HTML.id_ "answer", HTML.class_ "author"] $ HTML.toHtml (name . from $ post)
 >       HTML.section_ [HTML.class_ "answer card"] $ do
->          HTML.h1_ $ HTML.toHtmlRaw answer
+>          mconcat $ map (HTML.h1_ . HTML.toHtmlRaw) answers
 
 
 Now that we can get the latest post and make it look like a card let's serve it as a web page.
@@ -101,8 +107,8 @@ Now that we can get the latest post and make it look like a card let's serve it 
 >   case latestPost of
 >       Left  error -> html' $ error
 >       Right post  -> do
->           answer <- liftIO $ randomAnswer post
->           raw $ HTML.renderBS $ card post answer
+>           answers <- liftIO $ randomAnswers post
+>           raw $ HTML.renderBS $ card post answers
 
 The html' function is useful for turning Strings (as opposed to Text) into HTML.
 
