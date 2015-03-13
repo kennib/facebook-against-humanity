@@ -2,7 +2,8 @@
 
 The goal of this project is to turn posts from Facebook into Cards Against Humanity questions.
 We're going to achieve this by reading the wall posts from the Facebook graph API.
-Then once we have the wall posts, displaying them as web pages.
+These wall posts will be question which will be answered with a random Cards Against Humanity card.
+This question and answer will be displayed as a web page.
 
 
 The Scotty library will allow us to serve our cards as web pages.
@@ -13,6 +14,13 @@ The Scotty library will allow us to serve our cards as web pages.
 The Lucid library will help us create HTML for displaying our cards.
 
 > import qualified Lucid as HTML
+
+
+The random library allows us to select a random CAH card.
+
+> import Data.RVar (runRVar)
+> import Data.Random.Extras (choice)
+> import Data.Random.Source.DevRandom (DevRandom(..))
 
 The HTTP library allows us to fetch the RSS feed from the internet.
 
@@ -59,11 +67,18 @@ To find only the wall posts we simply check the status type
 > wallPosts = filter (\post -> status_type post == "wall_post")
 
 
-We don't just want to display the latest post.
+We now have a question, but what about the answer?
+The answer is randomly selected from a list of Cards Agains Humanity cards.
+
+> randomAnswer post = do
+>   cards <- fmap lines $ readFile "answers.txt"
+>   runRVar (choice cards) DevRandom
+
+We don't just want to display the latest post and answer.
 We want to display it in the style of a Cards Against Humanity card.
 
-> card :: Post -> HTML.Html ()
-> card post = HTML.html_ $ do
+> card :: Post -> String -> HTML.Html ()
+> card post answer = HTML.html_ $ do
 >   HTML.head_ $ do
 >       HTML.link_ [HTML.type_ "text/css", HTML.rel_ "stylesheet", HTML.href_ "facebook-against-humanity.css"]
 >   HTML.body_ $ do
@@ -71,16 +86,18 @@ We want to display it in the style of a Cards Against Humanity card.
 >          HTML.h1_ $ HTML.toHtml (message post)
 >          HTML.p_ [HTML.class_ "author"] $ HTML.toHtml (name . from $ post)
 >       HTML.section_ [HTML.class_ "answer card"] $ do
->          HTML.h1_ $ HTML.toHtml ("Bees?" :: String)
+>          HTML.h1_ $ HTML.toHtmlRaw answer
 
 
-Now that we can get the latest post nad make it look like a card let's serve it as a web page.
+Now that we can get the latest post and make it look like a card let's serve it as a web page.
 
 > cardHandler = do
 >   latestPost <- liftIO $ fetchLatestPost
 >   case latestPost of
 >       Left  error -> html' $ error
->       Right post  -> raw $ HTML.renderBS $ card post
+>       Right post  -> do
+>           answer <- liftIO $ randomAnswer post
+>           raw $ HTML.renderBS $ card post answer
 
 The html' function is useful for turning Strings (as opposed to Text) into HTML.
 
